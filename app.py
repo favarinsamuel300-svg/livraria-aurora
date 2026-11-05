@@ -8,7 +8,7 @@ st.set_page_config(page_title='Livraria Aurora | Gestão', page_icon='📚', lay
 ARQUIVO = Path(__file__).with_name('estoque_livraria.json')
 LIMITE_BAIXO = 5
 
-st.markdown('''<style>
+st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
 
 :root {
@@ -94,3 +94,35 @@ html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
 [data-baseweb="select"] > div { border-radius: 8px; }
 [data-testid="stDataFrame"] {
     border: 1px solid var(--borda);
+    border-radius: 10px;
+    overflow: hidden;
+}
+footer { visibility: hidden; }
+</style>""", unsafe_allow_html=True)
+
+
+def iniciais():
+    return {'proximo_id':1,'categorias':['Romance','Didático','Infantil'],
+            'metodos_pagamento':['Dinheiro','Pix','Cartão de crédito','Cartão de débito'],
+            'produtos':{},'vendas':[]}
+
+def carregar():
+    if ARQUIVO.exists():
+        try:
+            with ARQUIVO.open(encoding='utf-8') as f: d=json.load(f)
+            base=iniciais(); base.update(d); return base
+        except (OSError,json.JSONDecodeError): st.warning('Não foi possível ler o arquivo de dados. Um cadastro inicial foi carregado.')
+    return iniciais()
+
+def salvar():
+    tmp=ARQUIVO.with_suffix('.tmp')
+    with tmp.open('w',encoding='utf-8') as f: json.dump(st.session_state.dados,f,ensure_ascii=False,indent=2)
+    tmp.replace(ARQUIVO)
+
+def brl(v):
+    return 'R$ '+f'{float(v):,.2f}'.replace(',','X').replace('.',',').replace('X','.')
+
+def ordenados(): return sorted(st.session_state.dados['produtos'].items(),key=lambda x:int(x[0]))
+def resumo():
+    ps=st.session_state.dados['produtos'].values()
+    return (len(st.session_state.dados['produtos']),sum(p['quantidade'] for p in ps),
