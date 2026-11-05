@@ -10,209 +10,87 @@ LIMITE_BAIXO = 5
 
 st.markdown('''<style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
-html,body,[class*="css"]{font-family:'DM Sans',sans-serif}.stApp{background:#F4F6F8}
-[data-testid="stSidebar"]{background:#172B3A}[data-testid="stSidebar"] *{color:#F3F7F8!important}
-.page-title{font-family:'Playfair Display',serif;color:#243746;font-size:34px;font-weight:700}
-.page-subtitle{color:#718096;margin:0 0 24px}.metric-card{background:white;border:1px solid #E3E9ED;border-radius:13px;padding:18px 20px;min-height:120px}
-.metric-label{color:#718096;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
-.metric-value{color:#243746;font-size:27px;font-weight:700;margin-top:9px}.metric-help{color:#718096;font-size:11px}
-.section-title{color:#243746;font-size:18px;font-weight:700;margin:16px 0 12px}
-div.stButton>button[kind="primary"]{background:#2F8F72;border:0;color:white;font-weight:700;border-radius:8px}
-div[data-testid="stForm"]{background:white;border:1px solid #E3E9ED;border-radius:12px;padding:18px}
-footer{visibility:hidden}
-</style>''', unsafe_allow_html=True)
 
+:root {
+    --verde-profundo: #183B32;
+    --verde-principal: #285C4D;
+    --verde-suave: #8BAF9B;
+    --verde-claro: #E4EDE5;
+    --fundo: #F6F8F4;
+    --texto: #243B32;
+    --texto-secundario: #718078;
+    --borda: #DCE6DD;
+    --branco: #FFFFFF;
+}
 
-def iniciais():
-    return {'proximo_id':1,'categorias':['Romance','Didático','Infantil'],
-            'metodos_pagamento':['Dinheiro','Pix','Cartão de crédito','Cartão de débito'],
-            'produtos':{},'vendas':[]}
+html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
+.stApp { background: var(--fundo); color: var(--texto); }
+[data-testid="stSidebar"] { background: var(--verde-profundo); }
+[data-testid="stSidebar"] * { color: #F4F8F4 !important; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label { border-radius: 8px; }
 
-def carregar():
-    if ARQUIVO.exists():
-        try:
-            with ARQUIVO.open(encoding='utf-8') as f: d=json.load(f)
-            base=iniciais(); base.update(d); return base
-        except (OSError,json.JSONDecodeError): st.warning('Não foi possível ler o arquivo de dados. Um cadastro inicial foi carregado.')
-    return iniciais()
+.page-title {
+    font-family: 'Playfair Display', serif;
+    color: var(--verde-profundo);
+    font-size: 34px;
+    font-weight: 700;
+}
+.page-subtitle { color: var(--texto-secundario); margin: 0 0 24px; }
+.metric-card {
+    background: var(--branco);
+    border: 1px solid var(--borda);
+    border-radius: 13px;
+    padding: 18px 20px;
+    min-height: 120px;
+}
+.metric-label {
+    color: var(--texto-secundario);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.metric-value {
+    color: var(--verde-profundo);
+    font-size: 27px;
+    font-weight: 700;
+    margin-top: 9px;
+}
+.metric-help { color: var(--texto-secundario); font-size: 11px; }
+.section-title {
+    color: var(--verde-profundo);
+    font-size: 18px;
+    font-weight: 700;
+    margin: 16px 0 12px;
+}
 
-def salvar():
-    tmp=ARQUIVO.with_suffix('.tmp')
-    with tmp.open('w',encoding='utf-8') as f: json.dump(st.session_state.dados,f,ensure_ascii=False,indent=2)
-    tmp.replace(ARQUIVO)
-
-def brl(v):
-    return 'R$ '+f'{float(v):,.2f}'.replace(',','X').replace('.',',').replace('X','.')
-
-def ordenados(): return sorted(st.session_state.dados['produtos'].items(),key=lambda x:int(x[0]))
-def resumo():
-    ps=st.session_state.dados['produtos'].values()
-    return (len(st.session_state.dados['produtos']),sum(p['quantidade'] for p in ps),
-            sum(p['quantidade']*p['preco'] for p in ps),
-            sum(p['quantidade']<=LIMITE_BAIXO for p in ps),
-            sum(v['total'] for v in st.session_state.dados['vendas']))
-def cabecalho(t,s): st.markdown(f'<div class="page-title">{t}</div><div class="page-subtitle">{s}</div>',unsafe_allow_html=True)
-def cards(items):
-    cols=st.columns(len(items))
-    for c,(a,b,d) in zip(cols,items):
-        with c: st.markdown(f'<div class="metric-card"><div class="metric-label">{a}</div><div class="metric-value">{b}</div><div class="metric-help">{d}</div></div>',unsafe_allow_html=True)
-def df_produtos(lista=None):
-    lista=ordenados() if lista is None else lista
-    return pd.DataFrame([{'Código':i,'Produto':p['nome'],'Categoria':p['categoria'],'Quantidade':p['quantidade'],'Preço':brl(p['preco']),'Situação':'Estoque baixo' if p['quantidade']<=LIMITE_BAIXO else 'Disponível'} for i,p in lista],columns=['Código','Produto','Categoria','Quantidade','Preço','Situação'])
-
-if 'dados' not in st.session_state: st.session_state.dados=carregar()
-if 'carrinho' not in st.session_state: st.session_state.carrinho=[]
-d=st.session_state.dados
-
-with st.sidebar:
-    st.markdown('# AURORA')
-    st.caption('L I V R A R I A')
-    st.divider()
-    pagina=st.radio('MENU PRINCIPAL',['Visão geral','Produtos','Categorias','Estoque','Vendas','Histórico','Pagamentos'])
-    st.divider(); st.caption('Sistema de gestão • Versão web 1.0')
-
-if pagina=='Visão geral':
-    cabecalho('Visão geral','Acompanhe os principais números da sua livraria.')
-    n,itens,val,baixos,vendido=resumo()
-    cards([('Produtos cadastrados',str(n),'Itens diferentes no catálogo'),('Unidades em estoque',str(itens),'Quantidade total disponível'),('Valor em estoque',brl(val),'Estimativa pelo preço de venda'),('Estoque baixo',str(baixos),f'Limite de alerta: {LIMITE_BAIXO} unidades')])
-    a,b=st.columns([2,1])
-    with a:
-        st.markdown('<div class="section-title">Produtos com estoque baixo</div>',unsafe_allow_html=True)
-        lista=[x for x in ordenados() if x[1]['quantidade']<=LIMITE_BAIXO]
-        if lista: st.dataframe(df_produtos(lista),use_container_width=True,hide_index=True)
-        else: st.success('Tudo em ordem. Nenhum produto está com estoque baixo.')
-    with b:
-        st.markdown('<div class="section-title">Resumo de vendas</div>',unsafe_allow_html=True)
-        st.metric('Total vendido',brl(vendido)); st.metric('Vendas registradas',len(d['vendas']))
-        st.info('Use o menu lateral para navegar pelo sistema.')
-
-elif pagina=='Produtos':
-    cabecalho('Produtos','Cadastre, consulte, edite e remova produtos.')
-    with st.expander('＋ Cadastrar novo produto'):
-        with st.form('novo_produto',clear_on_submit=True):
-            nome=st.text_input('Nome do produto')
-            cat=st.selectbox('Categoria',d['categorias']) if d['categorias'] else None
-            c1,c2=st.columns(2); qtd=c1.number_input('Quantidade',min_value=0,step=1); preco=c2.number_input('Preço (R$)',min_value=0.0,step=.5,format='%.2f')
-            ok=st.form_submit_button('Salvar produto',type='primary')
-            if ok:
-                if not nome.strip(): st.error('Informe o nome do produto.')
-                elif not cat: st.error('Cadastre uma categoria primeiro.')
-                else:
-                    pid=str(d['proximo_id']); d['proximo_id']+=1
-                    d['produtos'][pid]={'nome':nome.strip(),'categoria':cat,'quantidade':int(qtd),'preco':round(preco,2)}
-                    salvar(); st.success('Produto cadastrado.'); st.rerun()
-    x,y=st.columns([2,1]); termo=x.text_input('Buscar por nome'); filtro=y.selectbox('Categoria',['Todas']+d['categorias'])
-    lista=[(i,p) for i,p in ordenados() if termo.lower() in p['nome'].lower() and (filtro=='Todas' or p['categoria']==filtro)]
-    st.dataframe(df_produtos(lista),use_container_width=True,hide_index=True)
-    if lista:
-        pid=st.selectbox('Produto para editar/remover',[i for i,_ in lista],format_func=lambda i:f"{i} — {d['produtos'][i]['nome']}")
-        p=d['produtos'][pid]
-        with st.expander('Editar produto selecionado'):
-            with st.form('editar_produto'):
-                nn=st.text_input('Nome',p['nome']); nc=st.selectbox('Categoria',d['categorias'],index=d['categorias'].index(p['categoria']))
-                a,b=st.columns(2); nq=a.number_input('Quantidade',min_value=0,step=1,value=int(p['quantidade'])); np=b.number_input('Preço',min_value=0.0,step=.5,value=float(p['preco']),format='%.2f')
-                if st.form_submit_button('Salvar alterações',type='primary'):
-                    if not nn.strip(): st.error('O nome é obrigatório.')
-                    else:
-                        p.update(nome=nn.strip(),categoria=nc,quantidade=int(nq),preco=round(np,2)); salvar(); st.success('Produto atualizado.'); st.rerun()
-        if st.button('Remover produto selecionado'):
-            st.session_state.confirmar=pid
-        if st.session_state.get('confirmar')==pid:
-            st.warning(f"Confirma remover {p['nome']}?")
-            a,b=st.columns(2)
-            if a.button('Sim, remover',type='primary'):
-                del d['produtos'][pid]; st.session_state.pop('confirmar',None); salvar(); st.rerun()
-            if b.button('Cancelar'): st.session_state.pop('confirmar',None); st.rerun()
-    elif not d['produtos']: st.info('Ainda não há produtos cadastrados.')
-
-elif pagina=='Categorias':
-    cabecalho('Categorias','Organize os produtos por tipo ou seção.')
-    with st.form('nova_categoria',clear_on_submit=True):
-        nome=st.text_input('Nome da nova categoria')
-        if st.form_submit_button('＋ Criar categoria',type='primary'):
-            if not nome.strip(): st.error('Digite o nome da categoria.')
-            elif any(x.lower()==nome.strip().lower() for x in d['categorias']): st.error('Essa categoria já existe.')
-            else: d['categorias'].append(nome.strip()); salvar(); st.success('Categoria criada.'); st.rerun()
-    linhas=[]
-    for c in d['categorias']:
-        ps=[p for p in d['produtos'].values() if p['categoria']==c]
-        linhas.append({'Categoria':c,'Produtos cadastrados':len(ps),'Unidades em estoque':sum(p['quantidade'] for p in ps)})
-    st.dataframe(pd.DataFrame(linhas),use_container_width=True,hide_index=True)
-    if d['categorias']:
-        c=st.selectbox('Categoria para remover',d['categorias']); em_uso=any(p['categoria']==c for p in d['produtos'].values())
-        if em_uso: st.warning('Não é possível remover: há produtos usando essa categoria.')
-        elif st.button('Remover categoria'): d['categorias'].remove(c); salvar(); st.rerun()
-
-elif pagina=='Estoque':
-    cabecalho('Controle de estoque','Visualize quantidades, valores e itens que precisam de reposição.')
-    n,itens,val,baixos,_=resumo(); cards([('Produtos',str(n),'Itens diferentes'),('Unidades',str(itens),'Total disponível'),('Valor estimado',brl(val),'Preço de venda em estoque'),('Repor',str(baixos),'Cinco unidades ou menos')])
-    linhas=[{'Código':i,'Produto':p['nome'],'Categoria':p['categoria'],'Unidades':p['quantidade'],'Valor unitário':brl(p['preco']),'Valor em estoque':brl(p['preco']*p['quantidade']),'Status':'Repor' if p['quantidade']<=LIMITE_BAIXO else 'Normal'} for i,p in ordenados()]
-    st.dataframe(pd.DataFrame(linhas),use_container_width=True,hide_index=True)
-    if d['produtos']:
-        st.markdown('<div class="section-title">Ajustar quantidade</div>',unsafe_allow_html=True)
-        pid=st.selectbox('Produto',[i for i,_ in ordenados()],format_func=lambda i:f"{i} — {d['produtos'][i]['nome']}")
-        op=st.radio('Operação',['Dar entrada','Dar saída','Definir quantidade exata'],horizontal=True); qtd=st.number_input('Quantidade',min_value=0,step=1)
-        if st.button('Atualizar estoque',type='primary'):
-            p=d['produtos'][pid]
-            if op!='Definir quantidade exata' and qtd==0: st.error('Informe quantidade maior que zero.')
-            elif op=='Dar entrada': p['quantidade']+=int(qtd)
-            elif op=='Dar saída':
-                if qtd>p['quantidade']: st.error('Estoque insuficiente.'); st.stop()
-                p['quantidade']-=int(qtd)
-            else: p['quantidade']=int(qtd)
-            salvar(); st.success('Estoque atualizado.'); st.rerun()
-
-elif pagina=='Vendas':
-    cabecalho('Vendas','Registre uma venda e atualize o estoque automaticamente.')
-    total=sum(v['total'] for v in d['vendas']); cards([('Vendas registradas',str(len(d['vendas'])),'Transações concluídas'),('Total vendido',brl(total),'Soma das vendas')])
-    st.markdown('<div class="section-title">Adicionar itens ao carrinho</div>',unsafe_allow_html=True)
-    disponiveis=[(i,p) for i,p in ordenados() if p['quantidade']>0]
-    if disponiveis:
-        pid=st.selectbox('Produto',[i for i,_ in disponiveis],format_func=lambda i:f"{d['produtos'][i]['nome']} — {brl(d['produtos'][i]['preco'])} (disp.: {d['produtos'][i]['quantidade']})")
-        qtd=st.number_input('Quantidade',min_value=1,step=1,value=1)
-        if st.button('Adicionar ao carrinho'):
-            p=d['produtos'][pid]; ja=sum(x['quantidade'] for x in st.session_state.carrinho if x['pid']==pid)
-            if qtd+ja>p['quantidade']: st.error('Quantidade maior que o estoque disponível.')
-            else:
-                existente=next((x for x in st.session_state.carrinho if x['pid']==pid),None)
-                if existente: existente['quantidade']+=int(qtd)
-                else: st.session_state.carrinho.append({'pid':pid,'nome':p['nome'],'quantidade':int(qtd),'preco':p['preco']})
-                st.rerun()
-    else: st.info('Não há produtos com estoque disponível.')
-    st.markdown('<div class="section-title">Carrinho</div>',unsafe_allow_html=True)
-    if st.session_state.carrinho:
-        st.dataframe(pd.DataFrame([{'Produto':x['nome'],'Quantidade':x['quantidade'],'Preço unitário':brl(x['preco']),'Subtotal':brl(x['quantidade']*x['preco'])} for x in st.session_state.carrinho]),use_container_width=True,hide_index=True)
-        total=sum(x['quantidade']*x['preco'] for x in st.session_state.carrinho); st.subheader(f'Total: {brl(total)}')
-        if not d['metodos_pagamento']: st.warning('Cadastre um método de pagamento primeiro.')
-        else:
-            pag=st.selectbox('Forma de pagamento',d['metodos_pagamento'])
-            a,b=st.columns(2)
-            if a.button('Concluir venda',type='primary'):
-                for x in st.session_state.carrinho: d['produtos'][x['pid']]['quantidade']-=x['quantidade']
-                d['vendas'].append({'data':datetime.now().strftime('%d/%m/%Y %H:%M'),'itens':[{'nome':x['nome'],'quantidade':x['quantidade'],'preco':x['preco']} for x in st.session_state.carrinho],'total':round(total,2),'pagamento':pag})
-                st.session_state.carrinho=[]; salvar(); st.success('Venda registrada e estoque atualizado.'); st.rerun()
-            if b.button('Esvaziar carrinho'): st.session_state.carrinho=[]; st.rerun()
-    else: st.caption('Nenhum item adicionado ainda.')
-
-elif pagina=='Histórico':
-    cabecalho('Histórico de vendas','Consulte as transações realizadas na livraria.')
-    total=sum(v['total'] for v in d['vendas']); st.metric('Faturamento registrado',brl(total))
-    linhas=[]
-    for i,v in enumerate(d['vendas'],1):
-        itens=', '.join(f"{x['quantidade']}x {x['nome']}" for x in v['itens'])
-        linhas.append({'Nº':i,'Data e hora':v['data'],'Itens':itens,'Pagamento':v['pagamento'],'Total':brl(v['total'])})
-    st.dataframe(pd.DataFrame(linhas),use_container_width=True,hide_index=True)
-    if not linhas: st.info('Nenhuma venda registrada até o momento.')
-
-elif pagina=='Pagamentos':
-    cabecalho('Métodos de pagamento','Gerencie as formas aceitas no momento da venda.')
-    with st.form('novo_pagamento',clear_on_submit=True):
-        nome=st.text_input('Nome do método')
-        if st.form_submit_button('＋ Adicionar método',type='primary'):
-            if not nome.strip(): st.error('Digite o nome do método.')
-            elif any(x.lower()==nome.strip().lower() for x in d['metodos_pagamento']): st.error('Esse método já existe.')
-            else: d['metodos_pagamento'].append(nome.strip()); salvar(); st.success('Método adicionado.'); st.rerun()
-    st.dataframe(pd.DataFrame({'Métodos cadastrados':d['metodos_pagamento']}),use_container_width=True,hide_index=True)
-    if d['metodos_pagamento']:
-        m=st.selectbox('Método para remover',d['metodos_pagamento'])
-        if st.button('Remover método selecionado'): d['metodos_pagamento'].remove(m); salvar(); st.rerun()
+.stButton > button[kind="primary"], .stFormSubmitButton > button {
+    background: var(--verde-principal);
+    border: 1px solid var(--verde-principal);
+    color: white;
+    font-weight: 700;
+    border-radius: 8px;
+}
+.stButton > button[kind="primary"]:hover, .stFormSubmitButton > button:hover {
+    background: var(--verde-profundo);
+    border-color: var(--verde-profundo);
+    color: white;
+}
+.stButton > button, .stDownloadButton > button { border-radius: 8px; }
+[data-testid="stForm"] {
+    background: var(--branco);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 18px;
+}
+[data-testid="stMetric"] {
+    background: var(--branco);
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+    padding: 12px 15px;
+}
+[data-baseweb="input"] input,
+[data-baseweb="textarea"] textarea,
+[data-baseweb="select"] > div { border-radius: 8px; }
+[data-testid="stDataFrame"] {
+    border: 1px solid var(--borda);
