@@ -12,14 +12,14 @@ st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
 
 :root {
-    --verde-profundo: #183B32;
-    --verde-principal: #285C4D;
-    --verde-suave: #8BAF9B;
-    --verde-claro: #E4EDE5;
-    --fundo: #F6F8F4;
-    --texto: #243B32;
-    --texto-secundario: #718078;
-    --borda: #DCE6DD;
+    --verde-profundo: #1F2A37;
+    --verde-principal: #D77A5A;
+    --verde-suave: #E7B39A;
+    --verde-claro: #F7F1EC;
+    --fundo: #FFFDFC;
+    --texto: #23313F;
+    --texto-secundario: #6A7785;
+    --borda: #E9DFD7;
     --branco: #FFFFFF;
 }
 
@@ -136,7 +136,7 @@ def cards(items):
         with c: st.markdown(f'<div class="metric-card"><div class="metric-label">{a}</div><div class="metric-value">{b}</div><div class="metric-help">{d}</div></div>',unsafe_allow_html=True)
 def df_produtos(lista=None):
     lista=ordenados() if lista is None else lista
-    return pd.DataFrame([{'Código':i,'Produto':p['nome'],'Categoria':p['categoria'],'Quantidade':p['quantidade'],'Preço':brl(p['preco']),'Situação':'Estoque baixo' if p['quantidade']<=LIMITE_BAIXO else 'Disponível'} for i,p in lista],columns=['Código','Produto','Categoria','Quantidade','Preço','Situação'])
+    return pd.DataFrame([{'Código':i,'Produto':p['nome'],'Categoria':p['categoria'],'Quantidade':p['quantidade'],'Preço':brl(p['preco']),'Situação':'Estoque baixo' if p['quantidade']<=LIMITE_BAIXO else 'Em estoque'} for i,p in lista])
 
 if 'dados' not in st.session_state: st.session_state.dados=carregar()
 if 'carrinho' not in st.session_state: st.session_state.carrinho=[]
@@ -152,7 +152,7 @@ with st.sidebar:
 if pagina=='Visão geral':
     cabecalho('Visão geral','Acompanhe os principais números da sua livraria.')
     n,itens,val,baixos,vendido=resumo()
-    cards([('Produtos cadastrados',str(n),'Itens diferentes no catálogo'),('Unidades em estoque',str(itens),'Quantidade total disponível'),('Valor em estoque',brl(val),'Estimativa pelo preço de venda'),('Estoque baixo',str(baixos),f'Limite de alerta: {LIMITE_BAIXO} unidades')])
+    cards([('Produtos cadastrados',str(n),'Itens diferentes no catálogo'),('Unidades em estoque',str(itens),'Quantidade total disponível'),('Valor em estoque',brl(val),'Estimativa pelo preço de venda'),('Itens em baixo estoque',str(baixos),'Produtos com quantidade crítica')])
     a,b=st.columns([2,1])
     with a:
         st.markdown('<div class="section-title">Produtos com estoque baixo</div>',unsafe_allow_html=True)
@@ -223,7 +223,7 @@ elif pagina=='Categorias':
 
 elif pagina=='Estoque':
     cabecalho('Controle de estoque','Visualize quantidades, valores e itens que precisam de reposição.')
-    n,itens,val,baixos,_=resumo(); cards([('Produtos',str(n),'Itens diferentes'),('Unidades',str(itens),'Total disponível'),('Valor estimado',brl(val),'Preço de venda em estoque'),('Repor',str(baixos),'Cinco unidades ou menos')])
+    n,itens,val,baixos,_=resumo(); cards([('Produtos',str(n),'Itens diferentes'),('Unidades',str(itens),'Total disponível'),('Valor estimado',brl(val),'Preço de venda em estoque'),('Repor',str(baixos),'Produtos com estoque baixo')])
     linhas=[{'Código':i,'Produto':p['nome'],'Categoria':p['categoria'],'Unidades':p['quantidade'],'Valor unitário':brl(p['preco']),'Valor em estoque':brl(p['preco']*p['quantidade']),'Status':'Repor' if p['quantidade']<=LIMITE_BAIXO else 'Normal'} for i,p in ordenados()]
     st.dataframe(pd.DataFrame(linhas),use_container_width=True,hide_index=True)
     if d['produtos']:
@@ -267,7 +267,7 @@ elif pagina=='Vendas':
             a,b=st.columns(2)
             if a.button('Concluir venda',type='primary'):
                 for x in st.session_state.carrinho: d['produtos'][x['pid']]['quantidade']-=x['quantidade']
-                d['vendas'].append({'data':datetime.now().strftime('%d/%m/%Y %H:%M'),'itens':[{'nome':x['nome'],'quantidade':x['quantidade'],'preco':x['preco']} for x in st.session_state.carrinho],'total':round(total,2),'pagamento':pag})
+                d['vendas'].append({'data':datetime.now().strftime('%d/%m/%Y %H:%M'),'itens':[{'nome':x['nome'],'quantidade':x['quantidade'],'preco':x['preco']} for x in st.session_state.carrinho],'pagamento':pag,'total':total})
                 st.session_state.carrinho=[]; salvar(); st.success('Venda registrada e estoque atualizado.'); st.rerun()
             if b.button('Esvaziar carrinho'): st.session_state.carrinho=[]; st.rerun()
     else: st.caption('Nenhum item adicionado ainda.')
